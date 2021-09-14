@@ -19,13 +19,26 @@ export const appReducer = (state: AppState, action: Action): AppState => {
     case ActionType.SetFile:
       return {
         ...state,
-        file: payload,
+        workBook: payload,
       };
     case ActionType.SetResultParse:
       return {
         ...state,
         resultParse: payload,
       };
+    case ActionType.SetTotals:
+      return {
+        ...state,
+        totals: payload,
+      };
+    case ActionType.ResetResultParse: {
+      return {
+        ...state,
+        resultParse: {},
+        workBook: null,
+        totals: null,
+      };
+    }
     default:
       return state;
   }

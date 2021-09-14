@@ -1,5 +1,10 @@
+import { WorkBook } from 'xlsx';
+import { ClientWithABC } from './ClientWithABC';
+import { TTotals } from './TTotals';
+
 export type AppState = {
-  file: File | null;
+  workBook: WorkBook | null;
   inProgress: boolean;
-  resultParse: unknown[];
+  resultParse: Record<string, ClientWithABC>;
+  totals: TTotals | null;
 };
