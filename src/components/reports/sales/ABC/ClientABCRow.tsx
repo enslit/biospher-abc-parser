@@ -1,6 +1,6 @@
-import React from 'react';
-import { ClientTableData } from '../../types/ClientTableData';
-import { makeStyles } from '@material-ui/styles';
+import React, { useRef } from 'react';
+import { ClientTableData } from '../../../../types/reports/sales/ClientTableData';
+import { makeStyles } from '@mui/styles';
 import {
   Box,
   Collapse,
@@ -11,9 +11,10 @@ import {
   TableHead,
   TableRow,
   Typography,
-} from '@material-ui/core';
-import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
-import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
+} from '@mui/material';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { divideNumberDigits } from '../../../../utils/utils';
 
 type RowClientProps = {
   client: ClientTableData;
@@ -27,8 +28,9 @@ const useRowStyles = makeStyles({
   },
 });
 
-const RowClient = (props: RowClientProps): JSX.Element => {
+const ClientABCRow = (props: RowClientProps): JSX.Element => {
   const [open, setOpen] = React.useState(false);
+  const tableRef = useRef<HTMLTableElement>(null);
   const { client } = props;
   const classes = useRowStyles();
 
@@ -50,7 +52,7 @@ const RowClient = (props: RowClientProps): JSX.Element => {
         <TableCell align="center">{client.category}</TableCell>
         <TableCell align="right">{client.orders.length}</TableCell>
         <TableCell align="right">
-          {client.totalAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+          {divideNumberDigits(client.totalAmount.toFixed(2))}
         </TableCell>
         <TableCell align="right">
           {Math.round((client.part + Number.EPSILON) * 100) / 100}
@@ -63,18 +65,26 @@ const RowClient = (props: RowClientProps): JSX.Element => {
               <Typography variant="h6" gutterBottom component="div">
                 Заказы
               </Typography>
-              <Table size="small" aria-label="Заказы">
+              <Table size="small" aria-label="Заказы" ref={tableRef}>
                 <TableHead>
                   <TableRow>
                     <TableCell>Тип документа</TableCell>
                     <TableCell>Дата</TableCell>
                     <TableCell>Номер</TableCell>
                     <TableCell align="right">Сумма</TableCell>
+                    <TableCell align="right">Скидка</TableCell>
+                    <TableCell align="right">% Скидки</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {client.orders.map((order, index) => {
-                    const { type, amount, date = null, number = null } = order;
+                    const {
+                      type,
+                      amount,
+                      date = null,
+                      number = null,
+                      discount = '',
+                    } = order;
                     return (
                       <TableRow key={index}>
                         <TableCell>{type}</TableCell>
@@ -83,7 +93,15 @@ const RowClient = (props: RowClientProps): JSX.Element => {
                             'Без даты'}
                         </TableCell>
                         <TableCell>{number || 'Б/Н'}</TableCell>
-                        <TableCell align="right">{amount}</TableCell>
+                        <TableCell align="right">
+                          {divideNumberDigits(amount.toFixed(2))}
+                        </TableCell>
+                        <TableCell align="right">
+                          {discount && divideNumberDigits(discount.toFixed(2))}
+                        </TableCell>
+                        <TableCell align="right">
+                          {discount && ((discount / amount) * 100).toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -97,4 +115,4 @@ const RowClient = (props: RowClientProps): JSX.Element => {
   );
 };
 
-export default RowClient;
+export default ClientABCRow;

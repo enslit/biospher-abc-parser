@@ -1,17 +1,12 @@
 import React, { useCallback, useContext } from 'react';
-import { TTotals } from '../../types/TTotals';
-import {
-  Button,
-  createStyles,
-  Grid,
-  Theme,
-  Typography,
-} from '@material-ui/core';
-import { divideNumberDigits, roundDecimal } from '../../utils/utils';
-import CachedIcon from '@material-ui/icons/Cached';
-import { makeStyles } from '@material-ui/styles';
-import { AppDispatchContext } from '../App/App';
-import { ActionType } from '../../types/ActionType';
+import { TTotals } from '../../../../../types/reports/sales/TTotals';
+import { Button, Grid, Theme, Typography } from '@mui/material';
+import createStyles from '@mui/styles/createStyles';
+import { divideNumberDigits, roundDecimal } from '../../../../../utils/utils';
+import CachedIcon from '@mui/icons-material/Cached';
+import { makeStyles } from '@mui/styles';
+import { AppDispatchContext } from '../../../../App/App';
+import { ActionType } from '../../../../../types/state/ActionType';
 
 type TotalsProps = {
   data: TTotals;

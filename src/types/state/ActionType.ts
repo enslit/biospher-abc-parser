@@ -5,4 +5,6 @@ export enum ActionType {
   SetResultParse = 'set_result_parse',
   SetTotals = 'set_totals',
   ResetResultParse = 'reset_result_parse',
+  SetDataLoaded = 'set_data_loaded',
+  SetFileDetails = 'set_file_details',
 }

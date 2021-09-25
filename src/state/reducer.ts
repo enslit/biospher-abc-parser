@@ -1,8 +1,12 @@
-import { AppState } from '../types/AppState';
-import { Action } from '../types/Action';
-import { ActionType } from '../types/ActionType';
+import { AppState } from '../types/state/AppState';
+import { Action } from '../types/state/Action';
+import { ActionType } from '../types/state/ActionType';
+import { TSalesTableRow } from '../types/reports/sales/TSalesTableRow';
 
-export const appReducer = (state: AppState, action: Action): AppState => {
+export const appReducer = (
+  state: AppState<TSalesTableRow[]>,
+  action: Action
+): AppState<TSalesTableRow[]> => {
   const { type, payload = null } = action;
 
   switch (type) {
@@ -34,9 +38,24 @@ export const appReducer = (state: AppState, action: Action): AppState => {
     case ActionType.ResetResultParse: {
       return {
         ...state,
-        resultParse: {},
+        resultParse: {
+          meta: payload.meta,
+          data: payload.data,
+        },
         workBook: null,
         totals: null,
+      };
+    }
+    case ActionType.SetDataLoaded: {
+      return {
+        ...state,
+        isDataLoaded: payload,
+      };
+    }
+    case ActionType.SetFileDetails: {
+      return {
+        ...state,
+        fileDetails: payload,
       };
     }
     default:

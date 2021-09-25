@@ -3,4 +3,5 @@ export type Order = {
   number?: string;
   date?: Date;
   amount: number;
+  discount?: number;
 };

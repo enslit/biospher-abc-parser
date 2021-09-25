@@ -1,21 +1,23 @@
-import React from 'react';
-import { ClientTableData } from '../../types/ClientTableData';
+import React, { useRef } from 'react';
+import { ClientTableData } from '../../../../types/reports/sales/ClientTableData';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-} from '@material-ui/core';
-import RowClient from './RowClient';
+} from '@mui/material';
+import ClientABCRow from './ClientABCRow';
 
 type TableClientsProps = {
   clients: ClientTableData[];
 };
 
 const TableClients = (props: TableClientsProps): JSX.Element => {
+  const tableRef = useRef<HTMLTableElement>(null);
+
   return (
-    <Table size="small" aria-label="clients">
+    <Table size="small" aria-label="clients" ref={tableRef}>
       <TableHead>
         <TableRow>
           <TableCell />
@@ -28,7 +30,7 @@ const TableClients = (props: TableClientsProps): JSX.Element => {
       </TableHead>
       <TableBody>
         {props.clients.map((client) => (
-          <RowClient key={client.client} client={client} />
+          <ClientABCRow key={client.client} client={client} />
         ))}
       </TableBody>
     </Table>

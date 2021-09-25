@@ -5,4 +5,5 @@ export type HeaderMeta = {
   client?: MetaHeaderField;
   manager?: MetaHeaderField;
   orderSum?: MetaHeaderField;
+  discount?: MetaHeaderField;
 };

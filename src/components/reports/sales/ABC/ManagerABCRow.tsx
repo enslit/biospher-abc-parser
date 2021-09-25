@@ -3,19 +3,16 @@ import {
   Box,
   Collapse,
   IconButton,
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
   TableRow,
   Typography,
-} from '@material-ui/core';
-import { ManagerTableData } from '../../types/ManagerTableData';
-import { makeStyles } from '@material-ui/styles';
-import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
+} from '@mui/material';
+import { ManagerTableData } from '../../../../types/reports/sales/ManagerTableData';
+import { makeStyles } from '@mui/styles';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import TableClients from './TableClients';
-import { divideNumberDigits, roundDecimal } from '../../utils/utils';
+import { divideNumberDigits, roundDecimal } from '../../../../utils/utils';
 
 type RowProps = {
   row: ManagerTableData;
@@ -29,7 +26,7 @@ const useRowStyles = makeStyles({
   },
 });
 
-const Row = (props: RowProps): JSX.Element => {
+const ManagerABCRow = (props: RowProps): JSX.Element => {
   const [open, setOpen] = React.useState(false);
   const { row } = props;
   const classes = useRowStyles();
@@ -70,4 +67,4 @@ const Row = (props: RowProps): JSX.Element => {
   );
 };
 
-export default Row;
+export default ManagerABCRow;

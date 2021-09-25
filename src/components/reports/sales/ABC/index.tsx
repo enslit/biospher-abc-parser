@@ -1,5 +1,5 @@
-import React, { FC, useContext, useMemo } from 'react';
-import { AppStateContext } from '../App/App';
+import React, { FC, useContext, useMemo, useRef } from 'react';
+import { AppStateContext } from '../../../App/App';
 import {
   Paper,
   Table,
@@ -8,18 +8,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-} from '@material-ui/core';
-import Row from './Row';
-import { ClientTableData } from '../../types/ClientTableData';
-import { divideNumberDigits, roundDecimal } from '../../utils/utils';
-import { TTotals } from '../../types/TTotals';
-import { ABC } from '../../types/ABC';
+} from '@mui/material';
+import ManagerABCRow from './ManagerABCRow';
+import { ClientTableData } from '../../../../types/reports/sales/ClientTableData';
 
 const TableManagers: FC = () => {
-  const { resultParse, inProgress } = useContext(AppStateContext);
+  const { abc, inProgress } = useContext(AppStateContext);
+  const tableRef = useRef<HTMLTableElement>(null);
 
   const managers = useMemo(() => {
-    const objData = Object.entries(resultParse).reduce(
+    const objData = Object.entries(abc).reduce(
       (result: Record<string, ClientTableData[]>, [name, clientData]) => {
         const clientDataRow: ClientTableData = {
           ...clientData,
@@ -61,7 +59,7 @@ const TableManagers: FC = () => {
         clients,
       };
     });
-  }, [resultParse]);
+  }, [abc]);
 
   if (inProgress) {
     return <h2>Обработка...</h2>;
@@ -69,7 +67,7 @@ const TableManagers: FC = () => {
 
   return (
     <TableContainer component={Paper}>
-      <Table aria-label="collapsible table">
+      <Table aria-label="collapsible table" ref={tableRef}>
         <TableHead>
           <TableRow>
             <TableCell />
@@ -80,7 +78,9 @@ const TableManagers: FC = () => {
         </TableHead>
         <TableBody>
           {managers &&
-            managers.map((row) => <Row key={row.manager} row={row} />)}
+            managers.map((row) => (
+              <ManagerABCRow key={row.manager} row={row} />
+            ))}
         </TableBody>
       </Table>
     </TableContainer>
