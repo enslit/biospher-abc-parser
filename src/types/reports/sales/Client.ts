@@ -1,8 +1,7 @@
-import { Order } from './Order';
-import { SellWithoutOrder } from './SellWithoutOrder';
+import { TSaleTableRowWithoutClient } from '../../../features/reports/sales/AbcReport/abcReportFunctions';
 
 export interface Client {
   manager: string;
-  orders: Order[];
-  totalAmount: number;
+  orders: TSaleTableRowWithoutClient[];
+  amount: number;
 }

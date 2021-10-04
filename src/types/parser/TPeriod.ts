@@ -1,4 +1,4 @@
 export type TPeriod = {
-  start: Date | null;
-  end: Date | null;
+  start: Date | undefined;
+  end: Date | undefined;
 };

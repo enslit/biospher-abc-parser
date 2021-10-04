@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import LoaderPart from './LoaderPart';
+import { styled, useTheme } from '@mui/material/styles';
 
 type LoaderProps = {
   count?: number;
@@ -8,12 +9,19 @@ type LoaderProps = {
   size?: number;
 };
 
+const LoaderWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(2),
+  textAlign: 'center',
+}));
+
 const Loader = ({
   count = 15,
   size = 140,
   speed = 1000,
-  color = '#fff',
+  color,
 }: LoaderProps): JSX.Element => {
+  const theme = useTheme();
+
   const buildParts = useMemo<JSX.Element[]>(() => {
     const rotateStep: number = 360 / count;
     const delayStep: number = speed / count;
@@ -26,7 +34,7 @@ const Loader = ({
           step={i}
           delay={j}
           speed={speed}
-          color={color}
+          color={color || theme.palette.primary.main}
           size={size}
           count={count}
         />
@@ -34,17 +42,19 @@ const Loader = ({
     }
 
     return parts;
-  }, [color, count, size, speed]);
+  }, [color, count, size, speed, theme.palette.primary.main]);
 
   return (
-    <svg
-      className="loader"
-      width={`${size}px`}
-      height={`${size}px`}
-      preserveAspectRatio="xMidYMid"
-    >
-      {buildParts}
-    </svg>
+    <LoaderWrapper>
+      <svg
+        className="loader"
+        width={`${size}px`}
+        height={`${size}px`}
+        preserveAspectRatio="xMidYMid"
+      >
+        {buildParts}
+      </svg>
+    </LoaderWrapper>
   );
 };
 

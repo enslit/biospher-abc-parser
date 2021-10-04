@@ -1,131 +1,36 @@
-import React, {
-  createContext,
-  Dispatch,
-  FC,
-  useEffect,
-  useMemo,
-  useReducer,
-} from 'react';
-import './App.css';
-import { appReducer } from '../../state/reducer';
-import { AppState } from '../../types/state/AppState';
-import { Action } from '../../types/state/Action';
-import { utils } from 'xlsx';
-import { ActionType } from '../../types/state/ActionType';
-import { CssBaseline, Grid } from '@mui/material';
-import { setDataLoaded, setParseResult } from '../../state/actions';
-import ExcelParser, { ParserResponse } from '../../utils/ExcelParser';
-import { getOrderParts } from '../../utils/utils';
-import { TSalesTableRow } from '../../types/reports/sales/TSalesTableRow';
-import FileImportPanel from '../FileImportPanel';
+import React, { FC, useEffect } from 'react';
+import { CssBaseline } from '@mui/material';
 import Loader from '../Loader';
-import ParsingResultPanel from '../ParsingResultPanel';
 import MenuDrawer from '../MenuDrawer';
-
-const initState: AppState<TSalesTableRow[]> = {
-  fileDetails: null,
-  workBook: null,
-  inProgress: false,
-  isDataLoaded: false,
-  resultParse: {
-    meta: {
-      period: { start: null, end: null },
-      rows: 0,
-    },
-    data: [],
-  },
-  abc: {},
-  totals: null,
-};
-
-export const AppStateContext =
-  createContext<AppState<TSalesTableRow[]>>(initState);
-export const AppDispatchContext = createContext<Dispatch<Action>>(() => null);
-
-// const useStyles = makeStyles((theme) => ({
-//   root: {
-//     background: theme.palette.background.default,
-//     color: theme.palette.text.primary,
-//     minHeight: '100vh',
-//     padding: `${theme.spacing(2)}px 0`,
-//   },
-//   paper: {
-//     padding: theme.spacing(3),
-//   },
-// }));
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { selectAppReady, setReady } from '../../app/appReducer';
+import ErrorHandler from '../ErrorHandler';
+import AbcReport from '../../features/reports/sales/AbcReport';
+import AdapterDateFns from '@mui/lab/AdapterDateFns';
+import LocalizationProvider from '@mui/lab/LocalizationProvider';
+import ruLocale from 'date-fns/locale/ru';
+import WarningHandler from '../WarningHandler';
 
 const App: FC = () => {
-  const [state, dispatch] = useReducer(appReducer, initState);
-
-  const header = useMemo(
-    () => ({
-      order: {
-        label: 'Реализация',
-        dataGetter: getOrderParts,
-      },
-      manager: { label: 'менеджер' },
-      client: { label: 'Клиент' },
-      sum: { label: 'Выручка' },
-      discount: { label: 'Скидки' },
-    }),
-    []
-  );
+  const appReady = useAppSelector(selectAppReady);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (state.workBook) {
-      console.time('excel reader');
-      const sheetName = state.workBook.SheetNames[0];
-      const arr: (string | number | null)[][] = utils.sheet_to_json(
-        state.workBook.Sheets[sheetName],
-        {
-          header: 1,
-        }
-      );
-      console.timeEnd('excel reader');
-
-      console.time('parser');
-      new ExcelParser<TSalesTableRow>(arr, header)
-        .parse()
-        .then(({ meta, data }) => {
-          dispatch(
-            setParseResult<ParserResponse<TSalesTableRow>>({ meta, data })
-          );
-          dispatch(setDataLoaded(true));
-        })
-        .catch((error) => {
-          console.error(error.message);
-        })
-        .finally(() => {
-          dispatch({ type: ActionType.InProgressOff });
-        });
-      console.timeEnd('parser');
-    }
-  }, [state.workBook, header]);
+    dispatch(setReady());
+  }, [dispatch]);
 
   return (
-    <div>
+    <>
       <CssBaseline />
-      <AppDispatchContext.Provider value={dispatch}>
-        <AppStateContext.Provider value={state}>
-          <MenuDrawer>
-            {state.inProgress ? (
-              <Loader />
-            ) : (
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <FileImportPanel />
-                </Grid>
-                {state.isDataLoaded && (
-                  <Grid item xs={12}>
-                    <ParsingResultPanel />
-                  </Grid>
-                )}
-              </Grid>
-            )}
-          </MenuDrawer>
-        </AppStateContext.Provider>
-      </AppDispatchContext.Provider>
-    </div>
+      <LocalizationProvider dateAdapter={AdapterDateFns} locale={ruLocale}>
+        <MenuDrawer>
+          {!appReady && <Loader />}
+          <AbcReport />
+        </MenuDrawer>
+        <ErrorHandler />
+        <WarningHandler />
+      </LocalizationProvider>
+    </>
   );
 };
 

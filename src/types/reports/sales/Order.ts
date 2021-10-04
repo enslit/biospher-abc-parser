@@ -1,7 +1,6 @@
-export type Order = {
-  type: string;
-  number?: string;
-  date?: Date;
+import { IDocument } from './IDocument';
+
+export interface Order extends IDocument {
   amount: number;
   discount?: number;
-};
+}

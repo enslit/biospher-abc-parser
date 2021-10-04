@@ -1,8 +1,47 @@
 import { Order } from '../types/reports/sales/Order';
-import { Client } from '../types/reports/sales/Client';
 import { ClientWithABC } from '../types/reports/sales/ClientWithABC';
 import { ABC } from '../types/reports/sales/ABC';
-import { TTotals } from '../types/reports/sales/TTotals';
+import { TSalesTableRow } from '../types/reports/sales/TSalesTableRow';
+import { IReportPeriod } from '../types/reports/IReportPeriod';
+import { IResultDistributeOrders } from '../types/reports/IResultDistributeOrders';
+import { Quarter } from './date.extensions';
+import { IABCReportPeriod } from '../types/reports/sales/IABCReportPeriod';
+import { TPeriodStep } from '../types/reports/TPeriodStep';
+import { TReportPeriodType } from '../features/reports/sales/AbcReport/types/TReportPeriodType';
+import { TReportABCSettings } from '../features/reports/sales/AbcReport/types/TReportABCSettings';
+
+Date.prototype.getQuarter = function (): Quarter {
+  const month = this.getMonth();
+
+  switch (month) {
+    case 0:
+    case 1:
+    case 2:
+      return 1;
+    case 3:
+    case 4:
+    case 5:
+      return 2;
+    case 6:
+    case 7:
+    case 8:
+      return 3;
+    default:
+      return 4;
+  }
+};
+
+Date.prototype.isAnotherMonth = function (date: Date): boolean {
+  return date && this.getMonth() !== date.getMonth();
+};
+
+Date.prototype.isAnotherQuarter = function (date: Date): boolean {
+  return date && this.getQuarter() !== date.getQuarter();
+};
+
+Date.prototype.isAnotherYear = function (date: Date): boolean {
+  return date && this.getFullYear() !== date.getFullYear();
+};
 
 export const roundDecimal = (value: number): number =>
   Math.round(value * 100) / 100;
@@ -34,88 +73,28 @@ export const getOrderParts = (str: string): Omit<Order, 'amount'> | null => {
   return null;
 };
 
-export const calculateAbc = (
-  inputData: Record<string, Client>
-): Record<string, ClientWithABC> => {
-  const LEVEL_CATEGORY_A = 80;
-  const LEVEL_CATEGORY_B = 95;
+export function descendingComparator<T>(
+  a: T,
+  b: T,
+  orderBy: keyof T
+): -1 | 1 | 0 {
+  if (b[orderBy] < a[orderBy]) {
+    return -1;
+  }
+  if (b[orderBy] > a[orderBy]) {
+    return 1;
+  }
+  return 0;
+}
 
-  const entriesData = Object.entries(inputData);
-  entriesData.sort((a, b) => {
-    const [, valuesA] = a;
-    const [, valuesB] = b;
-
-    return valuesB.totalAmount - valuesA.totalAmount;
-  });
-
-  let cumulativePercent = 0;
-
-  const total = entriesData.reduce((acc, [, value]) => {
-    acc += value.totalAmount;
-    return acc;
-  }, 0);
-
-  const resultEntries = entriesData.map(
-    ([clientName, clientData]): [string, ClientWithABC] => {
-      const part: number = (clientData.totalAmount / total) * 100;
-      cumulativePercent += part;
-      const category: ABC =
-        cumulativePercent < LEVEL_CATEGORY_A
-          ? ABC.A
-          : cumulativePercent < LEVEL_CATEGORY_B
-          ? ABC.B
-          : ABC.C;
-
-      return [
-        clientName,
-        {
-          ...clientData,
-          abc: {
-            part,
-            category,
-          },
-        },
-      ];
-    }
-  );
-
-  return Object.fromEntries(resultEntries);
-};
-
-export const calculateTotals = (
-  data: Record<string, ClientWithABC>
-): TTotals => {
-  const totalsInit: TTotals = {
-    orders: 0,
-    amount: 0,
-    clients: {
-      a: 0,
-      b: 0,
-      c: 0,
-    },
-  };
-
-  return Object.values(data).reduce((acc: TTotals, clientData) => {
-    acc.orders += clientData.orders.length;
-    acc.amount += clientData.totalAmount;
-
-    switch (clientData.abc.category) {
-      case ABC.A: {
-        acc.clients.a += 1;
-        break;
-      }
-      case ABC.B: {
-        acc.clients.b += 1;
-        break;
-      }
-      case ABC.C: {
-        acc.clients.c += 1;
-        break;
-      }
-      default:
-        console.log('unknown ABC type:', clientData.abc.category);
-    }
-
-    return acc;
-  }, totalsInit);
-};
+export function getComparator<Key extends keyof any>(
+  order: OrderDirection,
+  orderBy: Key
+): (
+  a: { [key in Key]: number | string },
+  b: { [key in Key]: number | string }
+) => number {
+  return order === 'desc'
+    ? (a, b) => descendingComparator(a, b, orderBy)
+    : (a, b) => -descendingComparator(a, b, orderBy);
+}

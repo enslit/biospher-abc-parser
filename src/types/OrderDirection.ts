@@ -1,0 +1,1 @@
+type OrderDirection = 'asc' | 'desc';

@@ -15,8 +15,9 @@ import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
-import { DarkMode } from '@mui/icons-material';
+import { DarkMode, LightMode } from '@mui/icons-material';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { changeTheme, selectCurrentTheme } from '../../app/appReducer';
 
 const drawerWidth = 240;
 
@@ -53,6 +54,10 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 interface AppBarProps extends MuiAppBarProps {
   open?: boolean;
 }
+
+const HeaderActions = styled('div')(() => ({
+  marginLeft: 'auto',
+}));
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== 'open',
@@ -96,6 +101,8 @@ interface MenuDrawerProps {
 function MenuDrawer(props: MenuDrawerProps): JSX.Element {
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
+  const currentTheme = useAppSelector(selectCurrentTheme);
+  const appDispatch = useAppDispatch();
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -105,13 +112,17 @@ function MenuDrawer(props: MenuDrawerProps): JSX.Element {
     setOpen(false);
   };
 
+  const handlerToggleTheme = () => {
+    appDispatch(changeTheme());
+  };
+
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" open={open}>
         <Toolbar>
           <IconButton
             color="inherit"
-            aria-label="open drawer"
+            aria-label="Открыть меню"
             onClick={handleDrawerOpen}
             edge="start"
             sx={{
@@ -124,11 +135,16 @@ function MenuDrawer(props: MenuDrawerProps): JSX.Element {
           <Typography variant="h6" noWrap component="div">
             ABC
           </Typography>
-          <div>
-            <IconButton color="inherit" aria-label="change theme" edge="end">
-              <DarkMode />
+          <HeaderActions>
+            <IconButton
+              color="inherit"
+              aria-label="change theme"
+              edge="end"
+              onClick={handlerToggleTheme}
+            >
+              {currentTheme === 'dark' ? <DarkMode /> : <LightMode />}
             </IconButton>
-          </div>
+          </HeaderActions>
         </Toolbar>
       </AppBar>
       <Drawer variant="permanent" open={open}>
@@ -143,14 +159,12 @@ function MenuDrawer(props: MenuDrawerProps): JSX.Element {
         </DrawerHeader>
         <Divider />
         <List>
-          {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
-            <ListItem button key={text}>
-              <ListItemIcon>
-                {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItem>
-          ))}
+          <ListItem button>
+            <ListItemIcon>
+              <InboxIcon />
+            </ListItemIcon>
+            <ListItemText primary={'ABC'} />
+          </ListItem>
         </List>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>

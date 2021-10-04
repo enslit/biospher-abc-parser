@@ -1,5 +1,6 @@
 import { TPeriod } from '../types/parser/TPeriod';
 import { InputData } from '../types/parser/InputData';
+import { TMeta } from '../types/parser/TMeta';
 
 type HeaderField = Record<
   string,
@@ -11,22 +12,19 @@ type HeaderField = Record<
 
 type TableHeader = Record<keyof HeaderField, number>;
 
-type TableContent<Row> = Record<keyof TableHeader, Row>;
+// type TableContent<Row> = Record<keyof TableHeader, Row>;
 
 export type ParserResponse<Row> = {
-  meta: {
-    period: TPeriod;
-    rows: number;
-  };
-  data: TableContent<Row>[];
+  meta: TMeta;
+  data: Row[];
 };
 
 class ExcelParser<Row> {
   private readonly data: InputData;
   private readonly headerFieldsName: HeaderField = {};
   private tableHeader: TableHeader = {};
-  private period: TPeriod = { start: null, end: null };
-  private resultParse: TableContent<Row>[] = [];
+  private period: TPeriod = { start: undefined, end: undefined };
+  private resultParse: Row[] = [];
 
   constructor(data: InputData, headerFields: HeaderField) {
     this.data = data;
@@ -76,7 +74,7 @@ class ExcelParser<Row> {
   private parseTableContentRow(row: (string | number | null)[]): void {
     if (!row[0]) return;
 
-    const rowData: TableContent<Row> = {};
+    const rowData: Record<keyof TableHeader, any> = {};
 
     for (const field in this.tableHeader) {
       const dataGetter = this.headerFieldsName[field]?.dataGetter;
@@ -86,7 +84,7 @@ class ExcelParser<Row> {
         : row[this.tableHeader[field]];
     }
 
-    this.resultParse.push(rowData);
+    this.resultParse.push(rowData as Row);
   }
 
   public async parse(): Promise<ParserResponse<Row>> {

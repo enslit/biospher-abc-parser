@@ -1,27 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './components/App/App';
 import reportWebVitals from './reportWebVitals';
-import {
-  createTheme,
-  ThemeProvider,
-  StyledEngineProvider,
-} from '@mui/material/styles';
-
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-  },
-});
+import { store } from './app/store';
+import { Provider } from 'react-redux';
+import AppThemed from './components/App/AppThemed';
 
 ReactDOM.render(
   <React.StrictMode>
-    <ThemeProvider theme={darkTheme}>
-      <StyledEngineProvider injectFirst>
-        <App />
-      </StyledEngineProvider>
-    </ThemeProvider>
+    <Provider store={store}>
+      <AppThemed />
+    </Provider>
   </React.StrictMode>,
   document.getElementById('root')
 );
