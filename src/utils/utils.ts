@@ -1,14 +1,5 @@
 import { Order } from '../types/reports/sales/Order';
-import { ClientWithABC } from '../types/reports/sales/ClientWithABC';
-import { ABC } from '../types/reports/sales/ABC';
-import { TSalesTableRow } from '../types/reports/sales/TSalesTableRow';
-import { IReportPeriod } from '../types/reports/IReportPeriod';
-import { IResultDistributeOrders } from '../types/reports/IResultDistributeOrders';
 import { Quarter } from './date.extensions';
-import { IABCReportPeriod } from '../types/reports/sales/IABCReportPeriod';
-import { TPeriodStep } from '../types/reports/TPeriodStep';
-import { TReportPeriodType } from '../features/reports/sales/AbcReport/types/TReportPeriodType';
-import { TReportABCSettings } from '../features/reports/sales/AbcReport/types/TReportABCSettings';
 
 Date.prototype.getQuarter = function (): Quarter {
   const month = this.getMonth();
@@ -43,8 +34,23 @@ Date.prototype.isAnotherYear = function (date: Date): boolean {
   return date && this.getFullYear() !== date.getFullYear();
 };
 
-export const roundDecimal = (value: number): number =>
-  Math.round(value * 100) / 100;
+export const sumFormatter = (num: number | bigint): string => {
+  return Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    currencyDisplay: 'symbol',
+    useGrouping: true,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
+export const percentFormatter = (num: number | bigint): string => {
+  return Intl.NumberFormat('ru-RU', {
+    style: 'percent',
+    maximumSignificantDigits: 2,
+  }).format(num);
+};
 
 export const divideNumberDigits = (value: number | string): string =>
   value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');

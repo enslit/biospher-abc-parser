@@ -11,7 +11,11 @@ import {
 } from '@mui/material';
 import { useAppSelector } from '../../../../../app/hooks';
 import { selectRenderABCManagersData } from '../abcSlice';
-import { divideNumberDigits, getComparator } from '../../../../../utils/utils';
+import {
+  getComparator,
+  percentFormatter,
+  sumFormatter,
+} from '../../../../../utils/utils';
 import { styled } from '@mui/material/styles';
 
 type Props = {
@@ -30,7 +34,6 @@ type TableData = {
 };
 
 interface HeadCell {
-  disablePadding: boolean;
   id: string;
   label: string;
   numeric: boolean;
@@ -50,49 +53,41 @@ const headCells: readonly HeadCell[] = [
   {
     id: 'manager',
     numeric: false,
-    disablePadding: true,
     label: 'Менеджер',
   },
   {
     id: 'ordersCount',
     numeric: true,
-    disablePadding: false,
     label: 'Количество заказов',
   },
   {
     id: 'total',
     numeric: true,
-    disablePadding: false,
     label: 'Сумма заказов',
   },
   {
     id: 'average',
     numeric: true,
-    disablePadding: false,
     label: 'Средний чек',
   },
   {
     id: 'part',
     numeric: true,
-    disablePadding: false,
     label: 'Доля продаж',
   },
   {
     id: 'a',
     numeric: true,
-    disablePadding: false,
     label: 'A',
   },
   {
     id: 'b',
     numeric: true,
-    disablePadding: false,
     label: 'B',
   },
   {
     id: 'c',
     numeric: true,
-    disablePadding: false,
     label: 'C',
   },
 ];
@@ -111,7 +106,6 @@ function EnhancedTableHead(props: EnhancedTableProps) {
           <TableCell
             key={headCell.id}
             align={headCell.numeric ? 'right' : 'left'}
-            padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
           >
             <TableSortLabel
@@ -173,18 +167,14 @@ const TableManagers: FC<Props> = (props) => {
                 hover
                 tabIndex={-1}
               >
-                <TableCell component="th" scope="row" padding="none">
+                <TableCell component="th" scope="row">
                   {row.manager}
                 </TableCell>
                 <TableCell align="right">{row.ordersCount}</TableCell>
+                <TableCell align="right">{sumFormatter(row.total)}</TableCell>
+                <TableCell align="right">{sumFormatter(row.average)}</TableCell>
                 <TableCell align="right">
-                  {divideNumberDigits(row.total.toFixed(2))}
-                </TableCell>
-                <TableCell align="right">
-                  {divideNumberDigits(row.average.toFixed(2))}
-                </TableCell>
-                <TableCell align="right">
-                  {(row.part * 100).toFixed(2)}%
+                  {percentFormatter(row.part)}
                 </TableCell>
                 <TableCell align="right">{row.a}</TableCell>
                 <TableCell align="right">{row.b}</TableCell>

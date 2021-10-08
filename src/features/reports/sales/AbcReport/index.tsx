@@ -41,10 +41,12 @@ const AbcReport: FC = () => {
   const abc = useAppSelector(selectCalculatedAbc);
   const dispatch = useAppDispatch();
 
+  const [selectedManager, setSelectedManager] = useState<string>('');
   const [managerClients, setManagerClients] = useState<Record<
     string,
     ClientWithABC
   > | null>(null);
+  const [selectedClient, setSelectedClient] = useState<string>('');
   const [clientOrders, setClientOrders] = useState<
     TSaleTableRowWithoutClient[] | null
   >(null);
@@ -118,20 +120,24 @@ const AbcReport: FC = () => {
       })
     );
 
+    setSelectedManager(manager);
     setManagerClients(clients);
   };
 
   const handleSelectClient = (client: string) => {
     if (managerClients) {
+      setSelectedClient(client);
       setClientOrders(managerClients[client].orders);
     }
   };
 
   const handleGoBackToRoot = () => {
+    setSelectedManager('');
     setManagerClients(null);
   };
 
   const handleGoBackToClients = () => {
+    setSelectedClient('');
     setClientOrders(null);
   };
 
@@ -144,7 +150,9 @@ const AbcReport: FC = () => {
   useEffect(() => {
     setTableMessage('');
     setIsBuilt(false);
+    setSelectedClient('');
     setClientOrders(null);
+    setSelectedManager('');
     setManagerClients(null);
   }, [abc]);
 
@@ -173,11 +181,13 @@ const AbcReport: FC = () => {
           (managerClients ? (
             clientOrders ? (
               <TableOrders
+                client={selectedClient}
                 orders={clientOrders}
                 onGoBack={handleGoBackToClients}
               />
             ) : (
               <TableClients
+                manager={selectedManager}
                 onRowClick={handleSelectClient}
                 onGoBack={handleGoBackToRoot}
                 data={managerClients}
