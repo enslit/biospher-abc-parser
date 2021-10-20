@@ -1,55 +1,33 @@
-import React, { FC, useEffect, useMemo, useState } from 'react';
+import React, { FC, useMemo, useState } from 'react';
 import Loader from '../../../../components/Loader';
 import FileImport from '../../../FileImport';
 import { getOrderParts } from '../../../../utils/utils';
 import { utils, WorkBook } from 'xlsx';
 import {
-  selectCalculatedAbc,
+  reset,
   selectIsDataReady,
-  selectOrdersData,
   selectProgressState,
-  selectRenderABCManagersData,
   selectSettings,
-  setCalculatedAbc,
   setInProgress,
-  setManagersData,
   setResultParse,
+  setSettings,
 } from './abcSlice';
 import ExcelParser from '../../../../utils/ExcelParser';
 import { TSalesTableRow } from '../../../../types/reports/sales/TSalesTableRow';
 import { setError, setWarning } from '../../../../app/appReducer';
 import { useAppDispatch, useAppSelector } from '../../../../app/hooks';
 import ReportSettings from './View/ReportSettings';
-import {
-  calculateSimpleAbc,
-  getManagersResults,
-  getPeriod,
-  TSaleTableRowWithoutClient,
-} from './abcReportFunctions';
-import TableManagers from './View/TableManagers';
 import { Grid, Typography } from '@mui/material';
-import { ClientWithABC } from '../../../../types/reports/sales/ClientWithABC';
-import TableClients from './View/TableClients';
-import TableOrders from './View/TableOrders';
+import { TReportABCSettings } from './types/TReportABCSettings';
+import AbcSimple from './ABCSimple';
+import AbcComparative from './ABCComparative';
 
 const AbcReport: FC = () => {
   const isInProgress = useAppSelector(selectProgressState);
   const isDataReady = useAppSelector(selectIsDataReady);
-  const orders = useAppSelector(selectOrdersData);
   const settings = useAppSelector(selectSettings);
-  const managersRenderData = useAppSelector(selectRenderABCManagersData);
-  const abc = useAppSelector(selectCalculatedAbc);
   const dispatch = useAppDispatch();
 
-  const [selectedManager, setSelectedManager] = useState<string>('');
-  const [managerClients, setManagerClients] = useState<Record<
-    string,
-    ClientWithABC
-  > | null>(null);
-  const [selectedClient, setSelectedClient] = useState<string>('');
-  const [clientOrders, setClientOrders] = useState<
-    TSaleTableRowWithoutClient[] | null
-  >(null);
   const [tableMessage, setTableMessage] = useState<string>('');
   const [isBuilt, setIsBuilt] = useState<boolean>(false);
 
@@ -92,15 +70,10 @@ const AbcReport: FC = () => {
       });
   };
 
-  const onApply = () => {
+  const onApply = (newSettings: TReportABCSettings): void => {
+    dispatch(setSettings(newSettings));
+    setIsBuilt(true);
     setTableMessage('');
-
-    const period = getPeriod(settings);
-    calculateSimpleAbc(orders, period, settings.weights).then((res) => {
-      dispatch(setCalculatedAbc(res));
-      dispatch(setManagersData(getManagersResults(res)));
-      setIsBuilt(true);
-    });
   };
 
   const onExport = () => {
@@ -109,56 +82,27 @@ const AbcReport: FC = () => {
 
   const onSettingsChange = () => {
     if (!tableMessage && isBuilt) {
+      setIsBuilt(false);
       setTableMessage('Настройки были изменены, сформируйте новый отчет');
     }
   };
 
-  const handleSelectManager = (manager: string) => {
-    const clients = Object.fromEntries(
-      Object.entries(abc).filter(([, data]) => {
-        return data.manager === manager;
-      })
-    );
-
-    setSelectedManager(manager);
-    setManagerClients(clients);
-  };
-
-  const handleSelectClient = (client: string) => {
-    if (managerClients) {
-      setSelectedClient(client);
-      setClientOrders(managerClients[client].orders);
-    }
-  };
-
-  const handleGoBackToRoot = () => {
-    setSelectedManager('');
-    setManagerClients(null);
-  };
-
-  const handleGoBackToClients = () => {
-    setSelectedClient('');
-    setClientOrders(null);
-  };
-
-  useEffect(() => {
-    if (isBuilt && Object.keys(managersRenderData).length === 0) {
-      setTableMessage('Не найдены заказы в выбранном диапазоне');
-    }
-  }, [managersRenderData, isBuilt]);
-
-  useEffect(() => {
-    setTableMessage('');
+  const onReset = () => {
+    dispatch(reset());
     setIsBuilt(false);
-    setSelectedClient('');
-    setClientOrders(null);
-    setSelectedManager('');
-    setManagerClients(null);
-  }, [abc]);
+    setTableMessage('');
+  };
 
-  return isInProgress ? (
-    <Loader />
-  ) : (
+  const renderReport = () => {
+    switch (settings.type) {
+      case 'simple':
+        return <AbcSimple />;
+      case 'comparative':
+        return <AbcComparative />;
+    }
+  };
+
+  return (
     <Grid container spacing={3}>
       <Grid item xs={12} height={'100%'}>
         {isDataReady ? (
@@ -166,7 +110,10 @@ const AbcReport: FC = () => {
             onApply={onApply}
             onExport={onExport}
             onChange={onSettingsChange}
+            onReset={onReset}
           />
+        ) : isInProgress ? (
+          <Loader />
         ) : (
           <FileImport onLoad={onFileLoaded} />
         )}
@@ -177,25 +124,7 @@ const AbcReport: FC = () => {
             {tableMessage}
           </Typography>
         )}
-        {isBuilt &&
-          (managerClients ? (
-            clientOrders ? (
-              <TableOrders
-                client={selectedClient}
-                orders={clientOrders}
-                onGoBack={handleGoBackToClients}
-              />
-            ) : (
-              <TableClients
-                manager={selectedManager}
-                onRowClick={handleSelectClient}
-                onGoBack={handleGoBackToRoot}
-                data={managerClients}
-              />
-            )
-          ) : (
-            <TableManagers onRowClick={handleSelectManager} />
-          ))}
+        {isBuilt && renderReport()}
       </Grid>
     </Grid>
   );

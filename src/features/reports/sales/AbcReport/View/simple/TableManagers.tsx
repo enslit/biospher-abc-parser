@@ -9,16 +9,17 @@ import {
   TableRow,
   TableSortLabel,
 } from '@mui/material';
-import { useAppSelector } from '../../../../../app/hooks';
-import { selectRenderABCManagersData } from '../abcSlice';
+import { useAppSelector } from '../../../../../../app/hooks';
 import {
   getComparator,
   percentFormatter,
   sumFormatter,
-} from '../../../../../utils/utils';
+} from '../../../../../../utils/utils';
 import { styled } from '@mui/material/styles';
+import { TManagerResults } from '../../types/TManagerResults';
 
 type Props = {
+  managers: Record<string, TManagerResults>;
   onRowClick: (manager: string) => void;
 };
 
@@ -123,17 +124,16 @@ function EnhancedTableHead(props: EnhancedTableProps) {
 }
 
 const TableManagers: FC<Props> = (props) => {
-  const managersRenderData = useAppSelector(selectRenderABCManagersData);
   const [order, setOrder] = React.useState<OrderDirection>('asc');
   const [orderBy, setOrderBy] = React.useState<string>('manager');
 
   const rows: TableData[] = useMemo(() => {
-    return Object.entries(managersRenderData).map(([manager, managerData]) => {
+    return Object.entries(props.managers).map(([manager, managerData]) => {
       const { part, average, ordersCount, total, clientsOnABC } = managerData;
       const { a, b, c } = clientsOnABC;
       return { manager, part, average, ordersCount, total, a, b, c };
     });
-  }, [managersRenderData]);
+  }, [props.managers]);
 
   const tableRef = useRef<HTMLTableElement>(null);
 

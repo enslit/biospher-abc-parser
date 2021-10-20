@@ -4,7 +4,10 @@ import { TABCWeights } from './types/TABCWeights';
 import { omit } from 'lodash';
 import { ABC } from '../../../../types/reports/sales/ABC';
 import { TManagerResults } from './types/TManagerResults';
-import { TReportABCSettings } from './types/TReportABCSettings';
+import { SimpleReportSettings } from './types/TReportABCSettings';
+import { ComparativeReportResult } from './types/ComparativeReportResult';
+import { ManagersResultsComparative } from './types/ManagersResultsComparative';
+import { ComparativeManagerSide } from './types/ComparativeManagerSide';
 
 type TFilterOrdersByPeriod = (
   orders: TSalesTableRow[],
@@ -22,6 +25,15 @@ type CalculateSimpleAbc = (
   period: { start: Date; end: Date },
   weights: TABCWeights
 ) => Promise<Record<string, ClientWithABC>>;
+
+type CalculateComparativeAbc = (
+  data: TSalesTableRow[],
+  period: {
+    periodLeft: { start: Date; end: Date };
+    periodRight: { start: Date; end: Date };
+  },
+  weights: TABCWeights
+) => Promise<ComparativeReportResult>;
 
 type TClientAmountSales = Map<keyof TGroupedOrdersByClient, number>;
 
@@ -126,6 +138,92 @@ const calculateSimpleAbc: CalculateSimpleAbc = async (
   return Object.fromEntries(resultEntries);
 };
 
+type GetManagersResultsComparative = (
+  clients: ComparativeReportResult
+) => ManagersResultsComparative;
+
+const getManagersResultsComparative: GetManagersResultsComparative = (
+  clients
+) => {
+  const managers: ManagersResultsComparative = {};
+
+  for (const clientName in clients) {
+    const client = clients[clientName];
+
+    let side: keyof typeof client;
+
+    for (side in client) {
+      const clientSideData = client[side];
+
+      if (!clientSideData) continue;
+
+      const { manager, amount, orders, abc } = clientSideData;
+
+      if (!managers[manager]) {
+        managers[manager] = {
+          left: null,
+          right: null,
+        };
+      }
+
+      const managerSideData = managers[manager][side];
+
+      if (!managerSideData) {
+        managers[manager] = {
+          ...managers[manager],
+          [side === 'left' ? 'left' : 'right']: {
+            total: amount,
+            ordersCount: orders.length,
+            clientsOnABC: {
+              a: abc.category === 'A' ? 1 : 0,
+              b: abc.category === 'B' ? 1 : 0,
+              c: abc.category === 'C' ? 1 : 0,
+            },
+            average: 0,
+            part: 0,
+          },
+        };
+      } else {
+        managerSideData.total += amount;
+        managerSideData.ordersCount += orders.length;
+
+        const cat =
+          abc.category === 'A' ? 'a' : abc.category === 'B' ? 'b' : 'c';
+        managerSideData.clientsOnABC[cat] += 1;
+      }
+    }
+  }
+
+  const totalAmount = Object.values(managers).reduce(
+    (acc, manager) => {
+      acc.left = acc.left + (manager.left?.total || 0);
+      acc.right = acc.right + (manager.right?.total || 0);
+
+      return acc;
+    },
+    { left: 0, right: 0 }
+  );
+
+  for (const managerName in managers) {
+    const manager = managers[managerName];
+
+    let side: keyof typeof manager;
+
+    for (side in manager) {
+      const managerSideData = manager[side];
+
+      if (!managerSideData) continue;
+
+      const { total, ordersCount } = managerSideData;
+
+      managerSideData.average = total / ordersCount;
+      managerSideData.part = total / totalAmount[side];
+    }
+  }
+
+  return managers;
+};
+
 type GetManagersResults = (
   clients: Record<string, ClientWithABC>
 ) => Record<string, TManagerResults>;
@@ -172,8 +270,47 @@ const getManagersResults: GetManagersResults = (clients) => {
   return managers;
 };
 
-const getPeriod = (
-  settings: TReportABCSettings
+const getComparativeReport: CalculateComparativeAbc = async (
+  data,
+  periods,
+  weights
+) => {
+  const [left, right] = await Promise.all([
+    calculateSimpleAbc(data, periods.periodLeft, weights),
+    calculateSimpleAbc(data, periods.periodRight, weights),
+  ]);
+
+  const result = Object.entries(left).reduce(
+    (res: ComparativeReportResult, [clientName, clientData]) => {
+      res[clientName] = {
+        left: clientData,
+        right: null,
+      };
+
+      return res;
+    },
+    {}
+  );
+
+  return Object.entries(right).reduce(
+    (res: ComparativeReportResult, [clientName, clientData]) => {
+      if (!res[clientName]) {
+        res[clientName] = {
+          left: null,
+          right: clientData,
+        };
+      } else {
+        res[clientName].right = clientData;
+      }
+
+      return res;
+    },
+    result
+  );
+};
+
+const getPeriodSimpleReport = (
+  settings: SimpleReportSettings
 ): { start: Date; end: Date } => {
   const quarterStartMonth = {
     1: 0,
@@ -187,58 +324,56 @@ const getPeriod = (
   startDate.setHours(0, 0, 0, 0);
   endDate.setHours(23, 59, 59, 999);
 
-  if (settings.type === 'simple') {
-    switch (settings.periodType) {
-      case 'current-month': {
-        startDate.setDate(1);
-        break;
-      }
-      case 'current-quart': {
-        startDate.setMonth(quarterStartMonth[startDate.getQuarter()], 1);
-        break;
-      }
-      case 'current-year': {
-        startDate.setMonth(0, 1);
-        break;
-      }
-      case 'last-month': {
-        startDate.setMonth(startDate.getMonth() - 1, 1);
-        endDate.setDate(0);
-        break;
-      }
-      case 'last-quart': {
-        const currentQuarter = startDate.getQuarter();
+  switch (settings.periodType) {
+    case 'current-month': {
+      startDate.setDate(1);
+      break;
+    }
+    case 'current-quart': {
+      startDate.setMonth(quarterStartMonth[startDate.getQuarter()], 1);
+      break;
+    }
+    case 'current-year': {
+      startDate.setMonth(0, 1);
+      break;
+    }
+    case 'last-month': {
+      startDate.setMonth(startDate.getMonth() - 1, 1);
+      endDate.setDate(0);
+      break;
+    }
+    case 'last-quart': {
+      const currentQuarter = startDate.getQuarter();
 
-        if (currentQuarter === 1) {
-          startDate.setFullYear(
-            startDate.getFullYear() - 1,
-            quarterStartMonth[4],
-            1
-          );
-          endDate.setFullYear(startDate.getFullYear() - 1, 11, 31);
-        } else {
-          startDate.setMonth(
-            quarterStartMonth[
-              currentQuarter === 2 ? 1 : currentQuarter === 3 ? 2 : 3
-            ],
-            1
-          );
-          endDate.setMonth(quarterStartMonth[currentQuarter], 0);
-        }
-        break;
+      if (currentQuarter === 1) {
+        startDate.setFullYear(
+          startDate.getFullYear() - 1,
+          quarterStartMonth[4],
+          1
+        );
+        endDate.setFullYear(startDate.getFullYear() - 1, 11, 31);
+      } else {
+        startDate.setMonth(
+          quarterStartMonth[
+            currentQuarter === 2 ? 1 : currentQuarter === 3 ? 2 : 3
+          ],
+          1
+        );
+        endDate.setMonth(quarterStartMonth[currentQuarter], 0);
       }
-      case 'last-year': {
-        startDate.setFullYear(startDate.getFullYear() - 1, 0, 1);
-        endDate.setMonth(0, 1);
-        endDate.setHours(0, 0, 0, 0);
-        break;
-      }
-      case 'custom': {
-        return {
-          start: settings.start || new Date(2000, 1, 1),
-          end: settings.end || new Date(2050, 1, 1),
-        };
-      }
+      break;
+    }
+    case 'last-year': {
+      startDate.setFullYear(startDate.getFullYear() - 1, 0, 1);
+      endDate.setMonth(0, 1);
+      endDate.setHours(0, 0, 0, 0);
+      break;
+    }
+    case 'custom': {
+      return {
+        start: settings.start || new Date(2000, 1, 1),
+        end: settings.end || new Date(2050, 1, 1),
+      };
     }
   }
 
@@ -248,7 +383,33 @@ const getPeriod = (
   };
 };
 
-export { calculateSimpleAbc, getManagersResults, getPeriod };
+export {
+  calculateSimpleAbc,
+  getManagersResults,
+  getPeriodSimpleReport,
+  getComparativeReport,
+  getManagersResultsComparative,
+};
+
+export const getChange = (
+  left: number | string | null,
+  right: number | string | null
+): 'up' | 'down' | 'flat' => {
+  if (left && !right) return 'down';
+  if (!left && right) return 'up';
+
+  if (left && right) {
+    if (typeof left === 'string') {
+      if (left > right) return 'up';
+      if (left < right) return 'down';
+    } else {
+      if (left < right) return 'up';
+      if (left > right) return 'down';
+    }
+  }
+
+  return 'flat';
+};
 
 // type DistributeOrdersByPeriod = (
 //   data: TSalesTableRow[],

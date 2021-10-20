@@ -52,6 +52,14 @@ export const percentFormatter = (num: number | bigint): string => {
   }).format(num);
 };
 
+export const diffFormatter = (num: number | bigint): string => {
+  return Intl.NumberFormat('ru-RU', {
+    useGrouping: true,
+    signDisplay: 'always',
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
 export const divideNumberDigits = (value: number | string): string =>
   value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 

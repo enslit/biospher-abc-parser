@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useMemo } from 'react';
+import React, { ChangeEvent, useMemo, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import {
   Button,
@@ -14,26 +14,19 @@ import {
   Typography,
 } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../../../../../app/hooks';
-import {
-  reset,
-  selectReportMeta,
-  selectSettings,
-  setSettingsPeriodType,
-  setSettingsPeriodDate,
-  setSettingsType,
-  setSettingsSlidingPeriod,
-  setSettingsSlidingPeriodsCount,
-} from '../abcSlice';
+import { selectReportMeta, selectSettings } from '../abcSlice';
 import { Refresh } from '@mui/icons-material';
 import { DatePicker } from '@mui/lab';
 import { TReportType } from '../types/TReportType';
 import { TReportPeriodType } from '../types/TReportPeriodType';
 import { TSlicePeriod } from '../types/TSlicePeriod';
+import { TReportABCSettings } from '../types/TReportABCSettings';
 
 type Props = {
-  onApply: () => void;
+  onApply: (settings: TReportABCSettings) => void;
   onExport: () => void;
   onChange: () => void;
+  onReset: () => void;
 };
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -43,7 +36,9 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 const ReportSettings = (props: Props): JSX.Element => {
   const settings = useAppSelector(selectSettings);
   const reportMeta = useAppSelector(selectReportMeta);
-  const dispatch = useAppDispatch();
+
+  const [currentSettings, setCurrentSettings] =
+    useState<TReportABCSettings>(settings);
 
   const formattedReportPeriodDate: {
     start: string | boolean;
@@ -60,33 +55,77 @@ const ReportSettings = (props: Props): JSX.Element => {
   }, [reportMeta]);
 
   const handleChangeReportType = (e: SelectChangeEvent<TReportType>) => {
-    dispatch(setSettingsType(e.target.value as TReportType));
+    setCurrentSettings((prev) => ({
+      ...prev,
+      type: e.target.value as TReportType,
+    }));
     props.onChange();
   };
 
-  const handleChangePeriodType = (e: SelectChangeEvent<TReportPeriodType>) => {
-    dispatch(setSettingsPeriodType(e.target.value as TReportPeriodType));
+  const handleChangeSimplePeriodType = (
+    e: SelectChangeEvent<TReportPeriodType>
+  ) => {
+    setCurrentSettings((prev) => ({
+      ...prev,
+      simple: {
+        ...prev.simple,
+        periodType: e.target.value as TReportPeriodType,
+      },
+    }));
     props.onChange();
   };
 
   const handleChangeSlicePeriodType = (e: SelectChangeEvent<TSlicePeriod>) => {
-    dispatch(setSettingsSlidingPeriod(e.target.value as TSlicePeriod));
+    setCurrentSettings((prev) => ({
+      ...prev,
+      simple: {
+        ...prev.simple,
+        slicePeriodType: e.target.value as TSlicePeriod,
+      },
+    }));
     props.onChange();
   };
 
   const handleChangeCountPeriods = (e: ChangeEvent<HTMLInputElement>) => {
-    dispatch(setSettingsSlidingPeriodsCount(+e.target.value));
+    setCurrentSettings((prev) => ({
+      ...prev,
+      simple: {
+        ...prev.simple,
+        countSlicePeriods: +e.target.value,
+      },
+    }));
     props.onChange();
   };
 
   const handleChangeDate = (key: 'start' | 'end') => (value: Date | null) => {
-    dispatch(setSettingsPeriodDate({ key, value }));
+    setCurrentSettings((prev) => ({
+      ...prev,
+      simple: {
+        ...prev.simple,
+        [key]: value,
+      },
+    }));
     props.onChange();
   };
 
-  const onReset = () => {
-    dispatch(reset());
-    props.onChange();
+  const handleChangeComparativeDate =
+    (pos: 'periodLeft' | 'periodRight', key: 'start' | 'end') =>
+    (value: Date | null) => {
+      setCurrentSettings((prev) => ({
+        ...prev,
+        comparative: {
+          ...prev.comparative,
+          [pos]: {
+            ...prev.comparative[pos],
+            [key]: value || undefined,
+          },
+        },
+      }));
+      props.onChange();
+    };
+
+  const onApply = () => {
+    props.onApply(currentSettings);
   };
 
   return (
@@ -120,7 +159,7 @@ const ReportSettings = (props: Props): JSX.Element => {
             size={'small'}
             startIcon={<Refresh />}
             fullWidth={true}
-            onClick={onReset}
+            onClick={props.onReset}
           >
             Сброс
           </Button>
@@ -131,7 +170,7 @@ const ReportSettings = (props: Props): JSX.Element => {
             <Select
               labelId="report-type-helper-label"
               id="report-type-helper"
-              value={settings.type}
+              value={currentSettings.type}
               label="Тип отчета"
               onChange={handleChangeReportType}
               fullWidth={true}
@@ -141,93 +180,143 @@ const ReportSettings = (props: Props): JSX.Element => {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={7} sx={{ display: 'flex', gap: '8px' }}>
-          <FormControl
-            fullWidth={true}
-            size={'small'}
-            sx={{ maxWidth: '350px' }}
-          >
-            <InputLabel id="report-period-helper-label">Период</InputLabel>
-            <Select
-              labelId="report-period-helper-label"
-              id="report-period-helper"
-              value={settings.periodType}
-              label="Период"
-              onChange={handleChangePeriodType}
+        {currentSettings.type === 'simple' && (
+          <Grid item xs={7} sx={{ display: 'flex', gap: '8px' }}>
+            <FormControl
+              fullWidth={true}
+              size={'small'}
+              sx={{ maxWidth: '350px' }}
             >
-              <MenuItem value="current-month">Текущий месяц</MenuItem>
-              <MenuItem value="current-quart">Текущий квартал</MenuItem>
-              <MenuItem value="current-year">Текущий год</MenuItem>
-              <MenuItem value="last-month">Прошлый месяц</MenuItem>
-              <MenuItem value="last-quart">Прошлый квартал</MenuItem>
-              <MenuItem value="last-year">Прошлый год</MenuItem>
-              {/*<MenuItem value="sliding">Скользящий период</MenuItem>*/}
-              <MenuItem value="custom">Произвольный</MenuItem>
-            </Select>
-          </FormControl>
-          {settings.periodType === 'sliding' && (
-            <>
-              <FormControl fullWidth={true} size={'small'}>
-                <InputLabel id="report-slice-period-helper-label">
-                  Интервал
-                </InputLabel>
-                <Select
-                  labelId="report-slice-period-helper-label"
-                  id="report-slice-period-helper"
-                  value={settings.slicePeriodType}
-                  label="Интервал"
-                  onChange={handleChangeSlicePeriodType}
-                >
-                  <MenuItem value="month">Месяц</MenuItem>
-                  <MenuItem value="quart">Квартал</MenuItem>
-                  <MenuItem value="year">Год</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth={true} size={'small'}>
-                <TextField
-                  label="Количество интервалов"
-                  id="sliding-count-intervals"
-                  value={settings.countSlicePeriods}
-                  onChange={handleChangeCountPeriods}
-                  size="small"
-                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+              <InputLabel id="report-period-helper-label">Период</InputLabel>
+              <Select
+                labelId="report-period-helper-label"
+                id="report-period-helper"
+                value={currentSettings.simple.periodType}
+                label="Период"
+                onChange={handleChangeSimplePeriodType}
+              >
+                <MenuItem value="current-month">Текущий месяц</MenuItem>
+                <MenuItem value="current-quart">Текущий квартал</MenuItem>
+                <MenuItem value="current-year">Текущий год</MenuItem>
+                <MenuItem value="last-month">Прошлый месяц</MenuItem>
+                <MenuItem value="last-quart">Прошлый квартал</MenuItem>
+                <MenuItem value="last-year">Прошлый год</MenuItem>
+                {/*<MenuItem value="sliding">Скользящий период</MenuItem>*/}
+                <MenuItem value="custom">Произвольный</MenuItem>
+              </Select>
+            </FormControl>
+            {currentSettings.simple.periodType === 'sliding' && (
+              <>
+                <FormControl fullWidth={true} size={'small'}>
+                  <InputLabel id="report-slice-period-helper-label">
+                    Интервал
+                  </InputLabel>
+                  <Select
+                    labelId="report-slice-period-helper-label"
+                    id="report-slice-period-helper"
+                    value={currentSettings.simple.slicePeriodType}
+                    label="Интервал"
+                    onChange={handleChangeSlicePeriodType}
+                  >
+                    <MenuItem value="month">Месяц</MenuItem>
+                    <MenuItem value="quart">Квартал</MenuItem>
+                    <MenuItem value="year">Год</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth={true} size={'small'}>
+                  <TextField
+                    label="Количество интервалов"
+                    id="sliding-count-intervals"
+                    value={currentSettings.simple.countSlicePeriods}
+                    onChange={handleChangeCountPeriods}
+                    size="small"
+                    inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                  />
+                </FormControl>
+              </>
+            )}
+            {currentSettings.simple.periodType === 'custom' && (
+              <>
+                <DatePicker
+                  mask={'__.__.____'}
+                  label="Начало"
+                  value={currentSettings.simple.start}
+                  minDate={reportMeta.period.start}
+                  maxDate={reportMeta.period.end}
+                  onChange={handleChangeDate('start')}
+                  renderInput={(params: TextFieldProps) => (
+                    <TextField size={'small'} fullWidth={true} {...params} />
+                  )}
                 />
-              </FormControl>
-            </>
-          )}
-          {settings.periodType === 'custom' && (
-            <>
-              <DatePicker
-                mask={'__.__.____'}
-                label="Начало"
-                value={settings.start}
-                minDate={reportMeta.period.start}
-                maxDate={reportMeta.period.end}
-                onChange={handleChangeDate('start')}
-                renderInput={(params: TextFieldProps) => (
-                  <TextField size={'small'} fullWidth={true} {...params} />
-                )}
-              />
-              <DatePicker
-                mask={'__.__.____'}
-                label="Конец"
-                value={settings.end}
-                minDate={reportMeta.period.start}
-                maxDate={reportMeta.period.end}
-                onChange={handleChangeDate('end')}
-                renderInput={(params: TextFieldProps) => (
-                  <TextField size={'small'} fullWidth={true} {...params} />
-                )}
-              />
-            </>
-          )}
-        </Grid>
+                <DatePicker
+                  mask={'__.__.____'}
+                  label="Конец"
+                  value={currentSettings.simple.end}
+                  minDate={reportMeta.period.start}
+                  maxDate={reportMeta.period.end}
+                  onChange={handleChangeDate('end')}
+                  renderInput={(params: TextFieldProps) => (
+                    <TextField size={'small'} fullWidth={true} {...params} />
+                  )}
+                />
+              </>
+            )}
+          </Grid>
+        )}
+        {currentSettings.type === 'comparative' && (
+          <Grid item xs={7} sx={{ display: 'flex', gap: '8px' }}>
+            <DatePicker
+              mask={'__.__.____'}
+              label="Начало интервал 1"
+              value={currentSettings.comparative.periodLeft.start}
+              minDate={reportMeta.period.start}
+              maxDate={reportMeta.period.end}
+              onChange={handleChangeComparativeDate('periodLeft', 'start')}
+              renderInput={(params: TextFieldProps) => (
+                <TextField size={'small'} fullWidth={true} {...params} />
+              )}
+            />
+            <DatePicker
+              mask={'__.__.____'}
+              label="Конец интервал 1"
+              value={currentSettings.comparative.periodLeft.end}
+              minDate={reportMeta.period.start}
+              maxDate={reportMeta.period.end}
+              onChange={handleChangeComparativeDate('periodLeft', 'end')}
+              renderInput={(params: TextFieldProps) => (
+                <TextField size={'small'} fullWidth={true} {...params} />
+              )}
+            />
+            <DatePicker
+              mask={'__.__.____'}
+              label="Начало интервал 2"
+              value={currentSettings.comparative.periodRight.start}
+              minDate={reportMeta.period.start}
+              maxDate={reportMeta.period.end}
+              onChange={handleChangeComparativeDate('periodRight', 'start')}
+              renderInput={(params: TextFieldProps) => (
+                <TextField size={'small'} fullWidth={true} {...params} />
+              )}
+            />
+            <DatePicker
+              mask={'__.__.____'}
+              label="Конец интервал 2"
+              value={currentSettings.comparative.periodRight.end}
+              minDate={reportMeta.period.start}
+              maxDate={reportMeta.period.end}
+              onChange={handleChangeComparativeDate('periodRight', 'end')}
+              renderInput={(params: TextFieldProps) => (
+                <TextField size={'small'} fullWidth={true} {...params} />
+              )}
+            />
+          </Grid>
+        )}
         <Grid item xs={2}>
           <Button
             variant={'contained'}
             color={'primary'}
             fullWidth={true}
-            onClick={props.onApply}
+            onClick={onApply}
           >
             Сформировать
           </Button>
